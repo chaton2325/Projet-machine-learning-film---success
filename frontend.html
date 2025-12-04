@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Prédiction de Succès des Films</title>
+    <!-- Bootstrap CSS -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <!-- Bootstrap Icons -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.3/font/bootstrap-icons.css">
+    <style>
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding-bottom: 50px;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            color: white;
+            padding: 2.5rem 0;
+            margin-bottom: 2rem;
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+        }
+        
+        .header h1 {
+            font-weight: 700;
+            margin-bottom: 0.5rem;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            max-width: 700px;
+            margin: 0 auto;
+        }
+        
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 6px 15px rgba(0, 0, 0, 0.08);
+            transition: transform 0.3s ease;
+            margin-bottom: 1.5rem;
+        }
+        
+        .card:hover {
+            transform: translateY(-5px);
+        }
+        
+        .card-header {
+            background-color: #fff;
+            border-bottom: 1px solid #eaeaea;
+            font-weight: 600;
+            padding: 1rem 1.25rem;
+            border-radius: 12px 12px 0 0 !important;
+        }
+        
+        .form-label {
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 0.5rem;
+        }
+        
+        .form-control, .form-select {
+            border-radius: 8px;
+            padding: 0.75rem 1rem;
+            border: 1px solid #ced4da;
+        }
+        
+        .form-control:focus, .form-select:focus {
+            border-color: #4dabf7;
+            box-shadow: 0 0 0 0.25rem rgba(77, 171, 247, 0.25);
+        }
+        
+        .btn-primary {
+            background-color: #4361ee;
+            border-color: #4361ee;
+            padding: 0.75rem 1.5rem;
+            font-weight: 600;
+            border-radius: 8px;
+        }
+        
+        .btn-primary:hover {
+            background-color: #3a56d4;
+            border-color: #3a56d4;
+        }
+        
+        .result-card {
+            border-left: 5px solid #4361ee;
+        }
+        
+        .success {
+            color: #2ecc71;
+            font-weight: 600;
+        }
+        
+        .failure {
+            color: #e74c3c;
+            font-weight: 600;
+        }
+        
+        .prediction-icon {
+            font-size: 2.5rem;
+            margin-bottom: 1rem;
+        }
+        
+        .api-info {
+            background-color: #e8f4fc;
+            border-radius: 10px;
+            padding: 1.5rem;
+            margin-top: 2rem;
+        }
+        
+        .api-info h5 {
+            color: #2c3e50;
+            margin-bottom: 1rem;
+        }
+        
+        .code-block {
+            background-color: #2c3e50;
+            color: #ecf0f1;
+            padding: 1rem;
+            border-radius: 8px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9rem;
+            overflow-x: auto;
+            margin-bottom: 1rem;
+        }
+        
+        .search-container {
+            position: relative;
+        }
+        
+        .search-results {
+            position: absolute;
+            top: 100%;
+            left: 0;
+            right: 0;
+            background-color: white;
+            border: 1px solid #ced4da;
+            border-radius: 0 0 8px 8px;
+            max-height: 200px;
+            overflow-y: auto;
+            z-index: 1000;
+            display: none;
+            box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+        }
+        
+        .search-item {
+            padding: 0.5rem 1rem;
+            cursor: pointer;
+            transition: background-color 0.2s;
+        }
+        
+        .search-item:hover {
+            background-color: #f8f9fa;
+        }
+        
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 1rem;
+        }
+        
+        .loading-spinner {
+            width: 2rem;
+            height: 2rem;
+        }
+        
+        @media (max-width: 768px) {
+            .header {
+                padding: 1.5rem 0;
+            }
+            
+            .header h1 {
+                font-size: 1.8rem;
+            }
+            
+            .card {
+                margin-bottom: 1rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="container">
+            <h1 class="text-center">Prédiction de Succès des Films</h1>
+            <p class="text-center">Utilisez cette interface pour prédire le succès critique et commercial d'un film en fonction de ses caractéristiques. Remplissez le formulaire ci-dessous et obtenez des prédictions basées sur notre modèle d'IA.</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8">
+                <div class="card">
+                    <div class="card-header">
+                        <i class="bi bi-film me-2"></i>Informations sur le film
+                    </div>
+                    <div class="card-body">
+                        <form id="movieForm">
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="budget" class="form-label">Budget ($)</label>
+                                    <input type="number" class="form-control" id="budget" min="0" step="100000" value="10000000" required>
+                                    <div class="form-text">Ex: 10000000 pour 10 millions de dollars</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="revenue" class="form-label">Recettes ($)</label>
+                                    <input type="number" class="form-control" id="revenue" min="0" step="100000" value="50000000" required>
+                                    <div class="form-text">Ex: 50000000 pour 50 millions de dollars</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="popularity" class="form-label">Popularité</label>
+                                    <input type="number" class="form-control" id="popularity" min="0" step="0.1" value="5.0" required>
+                                    <div class="form-text">Score de popularité (ex: 5.0)</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="runtime" class="form-label">Durée (minutes)</label>
+                                    <input type="number" class="form-control" id="runtime" min="1" value="120" required>
+                                    <div class="form-text">Durée du film en minutes</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="vote_average" class="form-label">Note moyenne</label>
+                                    <input type="number" class="form-control" id="vote_average" min="0" max="10" step="0.1" value="7.5" required>
+                                    <div class="form-text">Note moyenne sur 10 (ex: 7.5)</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="vote_count" class="form-label">Nombre de votes</label>
+                                    <input type="number" class="form-control" id="vote_count" min="0" value="1500" required>
+                                    <div class="form-text">Nombre total de votes (ex: 1500)</div>
+                                </div>
+                            </div>
+                            
+                            <div class="row">
+                                <div class="col-md-6 mb-3">
+                                    <label for="original_language" class="form-label">Langue originale</label>
+                                    <div class="search-container">
+                                        <input type="text" class="form-control" id="original_language" placeholder="Rechercher une langue (ex: 'en')" value="en" required>
+                                        <div class="search-results" id="languageResults"></div>
+                                    </div>
+                                    <div class="form-text">Commencez à taper pour rechercher une langue</div>
+                                </div>
+                                
+                                <div class="col-md-6 mb-3">
+                                    <label for="director" class="form-label">Directeur</label>
+                                    <div class="search-container">
+                                        <input type="text" class="form-control" id="director" placeholder="Rechercher un directeur (ex: 'Steven Spielberg')" value="Steven Spielberg" required>
+                                        <div class="search-results" id="directorResults"></div>
+                                    </div>
+                                    <div class="form-text">Commencez à taper pour rechercher un directeur</div>
+                                </div>
+                            </div>
+                            
+                            <div class="d-flex justify-content-between mt-4">
+                                <button type="button" class="btn btn-outline-secondary" id="resetBtn">
+                                    <i class="bi bi-arrow-clockwise me-2"></i>Réinitialiser
+                                </button>
+                                <button type="submit" class="btn btn-primary" id="predictBtn">
+                                    <i class="bi bi-magic me-2"></i>Obtenir les prédictions
+                                </button>
+                            </div>
+                        </form>
+                        
+                        <div class="loading mt-4" id="loadingIndicator">
+                            <div class="spinner-border text-primary loading-spinner" role="status">
+                                <span class="visually-hidden">Chargement...</span>
+                            </div>
+                            <p class="mt-2">Analyse en cours...</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="card result-card">
+                            <div class="card-header">
+                                <i class="bi bi-star-fill me-2"></i>Succès Critique
+                            </div>
+                            <div class="card-body text-center">
+                                <div id="critiqueResult">
+                                    <p class="text-muted">Remplissez le formulaire et cliquez sur "Obtenir les prédictions"</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="col-md-6">
+                        <div class="card result-card">
+                            <div class="card-header">
+                                <i class="bi bi-currency-dollar me-2"></i>Succès Commercial
+                            </div>
+                            <div class="card-body text-center">
+                                <div id="commercialResult">
+                                    <p class="text-muted">Remplissez le formulaire et cliquez sur "Obtenir les prédictions"</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="col-lg-4">
+                <div class="api-info">
+                    <h5><i class="bi bi-code-slash me-2"></i>Comment utiliser les requêtes API</h5>
+                    <p>Voici comment interagir avec l'API de prédiction directement :</p>
+                    
+                    <h6>Prédiction de succès critique</h6>
+                    <div class="code-block">
+curl -X POST http://127.0.0.1:5000/api/predict/critique \<br>
+  -H "Content-Type: application/json" \<br>
+  -d "{\"budget\":10000000,\"popularity\":5.0,\"revenue\":50000000,\"runtime\":120,\"vote_average\":7.5,\"vote_count\":1500,\"original_language\":\"en\",\"director\":\"Steven Spielberg\"}"
+                    </div>
+                    
+                    <h6>Prédiction de succès commercial</h6>
+                    <div class="code-block">
+curl -X POST http://127.0.0.1:5000/api/predict/commercial \<br>
+  -H "Content-Type: application/json" \<br>
+  -d "{\"budget\":10000000,\"popularity\":5.0,\"revenue\":50000000,\"runtime\":120,\"vote_average\":7.5,\"vote_count\":1500,\"original_language\":\"en\",\"director\":\"Steven Spielberg\"}"
+                    </div>
+                    
+                    <h6>Obtenir la liste des langues</h6>
+                    <div class="code-block">
+curl -X GET http://127.0.0.1:5000/api/languages
+                    </div>
+                    
+                    <h6>Obtenir la liste des directeurs</h6>
+                    <div class="code-block">
+curl -X GET http://127.0.0.1:5000/api/directors
+                    </div>
+                    
+                    <div class="alert alert-info mt-3">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Note :</strong> Les requêtes POST doivent inclure toutes les propriétés listées ci-dessus. Les requêtes GET retournent des listes de valeurs disponibles.
+                    </div>
+                </div>
+                
+                <div class="card mt-4">
+                    <div class="card-header">
+                        <i class="bi bi-info-circle me-2"></i>À propos de cette application
+                    </div>
+                    <div class="card-body">
+                        <p>Cette application utilise un modèle d'apprentissage automatique pour prédire le succès des films.</p>
+                        <p><strong>Succès critique :</strong> Basé sur les notes des critiques et la reconnaissance du film.</p>
+                        <p><strong>Succès commercial :</strong> Basé sur les recettes au box-office par rapport au budget.</p>
+                        <p class="mb-0">Les prédictions sont effectuées en temps réel via une API REST.</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Bootstrap JS Bundle -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // Variables globales pour stocker les listes de langues et directeurs
+        let languages = [];
+        let directors = [];
+        
+        // URL de base de l'API
+        const API_BASE_URL = 'http://127.0.0.1:5000';
+        
+        // Charger les listes de langues et directeurs au démarrage
+        document.addEventListener('DOMContentLoaded', function() {
+            loadLanguages();
+            loadDirectors();
+            setupEventListeners();
+        });
+        
+        // Charger la liste des langues depuis l'API
+        async function loadLanguages() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/languages`);
+                const data = await response.json();
+                languages = data.languages;
+                console.log(`${languages.length} langues chargées`);
+            } catch (error) {
+                console.error('Erreur lors du chargement des langues:', error);
+                // Valeurs par défaut en cas d'erreur
+                languages = ['en', 'fr', 'es', 'de', 'it', 'ja', 'zh', 'ko', 'ru', 'hi'];
+            }
+        }
+        
+        // Charger la liste des directeurs depuis l'API
+        async function loadDirectors() {
+            try {
+                const response = await fetch(`${API_BASE_URL}/api/directors`);
+                const data = await response.json();
+                directors = data.directors;
+                console.log(`${directors.length} directeurs chargés`);
+            } catch (error) {
+                console.error('Erreur lors du chargement des directeurs:', error);
+                // Valeurs par défaut en cas d'erreur
+                directors = [
+                    'Steven Spielberg', 'James Cameron', 'Christopher Nolan',
+                    'Quentin Tarantino', 'Martin Scorsese', 'Peter Jackson',
+                    'David Fincher', 'Ridley Scott', 'Tim Burton', 'George Lucas'
+                ];
+            }
+        }
+        
+        // Configurer les écouteurs d'événements
+        function setupEventListeners() {
+            // Formulaire de prédiction
+            document.getElementById('movieForm').addEventListener('submit', function(e) {
+                e.preventDefault();
+                getPredictions();
+            });
+            
+            // Bouton de réinitialisation
+            document.getElementById('resetBtn').addEventListener('click', function() {
+                resetForm();
+            });
+            
+            // Recherche de langue
+            const languageInput = document.getElementById('original_language');
+            languageInput.addEventListener('input', function() {
+                searchLanguages(this.value);
+            });
+            
+            // Recherche de directeur
+            const directorInput = document.getElementById('director');
+            directorInput.addEventListener('input', function() {
+                searchDirectors(this.value);
+            });
+            
+            // Fermer les résultats de recherche quand on clique ailleurs
+            document.addEventListener('click', function(e) {
+                if (!e.target.closest('.search-container')) {
+                    hideSearchResults('languageResults');
+                    hideSearchResults('directorResults');
+                }
+            });
+        }
+        
+        // Rechercher dans la liste des langues
+        function searchLanguages(query) {
+            const resultsContainer = document.getElementById('languageResults');
+            
+            if (!query.trim()) {
+                hideSearchResults('languageResults');
+                return;
+            }
+            
+            const filtered = languages.filter(lang => 
+                lang.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 10); // Limiter à 10 résultats
+            
+            displaySearchResults(filtered, resultsContainer, 'original_language');
+        }
+        
+        // Rechercher dans la liste des directeurs
+        function searchDirectors(query) {
+            const resultsContainer = document.getElementById('directorResults');
+            
+            if (!query.trim()) {
+                hideSearchResults('directorResults');
+                return;
+            }
+            
+            const filtered = directors.filter(director => 
+                director.toLowerCase().includes(query.toLowerCase())
+            ).slice(0, 10); // Limiter à 10 résultats
+            
+            displaySearchResults(filtered, resultsContainer, 'director');
+        }
+        
+        // Afficher les résultats de recherche
+        function displaySearchResults(items, container, targetInputId) {
+            container.innerHTML = '';
+            
+            if (items.length === 0) {
+                const noResult = document.createElement('div');
+                noResult.className = 'search-item text-muted';
+                noResult.textContent = 'Aucun résultat trouvé';
+                container.appendChild(noResult);
+            } else {
+                items.forEach(item => {
+                    const resultItem = document.createElement('div');
+                    resultItem.className = 'search-item';
+                    resultItem.textContent = item;
+                    resultItem.addEventListener('click', function() {
+                        document.getElementById(targetInputId).value = item;
+                        hideSearchResults(container.id);
+                    });
+                    container.appendChild(resultItem);
+                });
+            }
+            
+            container.style.display = 'block';
+        }
+        
+        // Masquer les résultats de recherche
+        function hideSearchResults(containerId) {
+            const container = document.getElementById(containerId);
+            if (container) {
+                container.style.display = 'none';
+            }
+        }
+        
+        // Obtenir les prédictions depuis l'API
+        async function getPredictions() {
+            // Valider le formulaire
+            if (!validateForm()) {
+                return;
+            }
+            
+            // Afficher l'indicateur de chargement
+            showLoading(true);
+            
+            // Préparer les données du film
+            const movieData = {
+                budget: parseInt(document.getElementById('budget').value),
+                popularity: parseFloat(document.getElementById('popularity').value),
+                revenue: parseInt(document.getElementById('revenue').value),
+                runtime: parseInt(document.getElementById('runtime').value),
+                vote_average: parseFloat(document.getElementById('vote_average').value),
+                vote_count: parseInt(document.getElementById('vote_count').value),
+                original_language: document.getElementById('original_language').value,
+                director: document.getElementById('director').value
+            };
+            
+            try {
+                // Envoyer les requêtes en parallèle
+                const [critiqueResponse, commercialResponse] = await Promise.all([
+                    fetch(`${API_BASE_URL}/api/predict/critique`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(movieData)
+                    }),
+                    fetch(`${API_BASE_URL}/api/predict/commercial`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json'
+                        },
+                        body: JSON.stringify(movieData)
+                    })
+                ]);
+                
+                // Traiter les réponses
+                const critiqueResult = await critiqueResponse.json();
+                const commercialResult = await commercialResponse.json();
+                
+                // Afficher les résultats
+                displayResults(critiqueResult, commercialResult);
+                
+            } catch (error) {
+                console.error('Erreur lors de la prédiction:', error);
+                displayError();
+            } finally {
+                // Masquer l'indicateur de chargement
+                showLoading(false);
+            }
+        }
+        
+        // Valider le formulaire
+        function validateForm() {
+            const inputs = [
+                'budget', 'popularity', 'revenue', 'runtime', 
+                'vote_average', 'vote_count', 'original_language', 'director'
+            ];
+            
+            for (const inputId of inputs) {
+                const input = document.getElementById(inputId);
+                if (!input.value.trim()) {
+                    alert(`Le champ "${input.previousElementSibling.textContent}" est requis`);
+                    input.focus();
+                    return false;
+                }
+            }
+            
+            return true;
+        }
+        
+        // Afficher les résultats
+        function displayResults(critiqueResult, commercialResult) {
+            // Succès critique
+            const critiqueContainer = document.getElementById('critiqueResult');
+            const critiqueSuccess = critiqueResult.critique_success === 1;
+            
+            critiqueContainer.innerHTML = `
+                <div class="prediction-icon">
+                    ${critiqueSuccess ? 
+                        '<i class="bi bi-emoji-smile-fill text-success"></i>' : 
+                        '<i class="bi bi-emoji-frown-fill text-danger"></i>'}
+                </div>
+                <h4 class="${critiqueSuccess ? 'success' : 'failure'}">
+                    ${critiqueSuccess ? 'SUCCÈS CRITIQUE' : 'ÉCHEC CRITIQUE'}
+                </h4>
+                <p>Le modèle prédit que ce film ${critiqueSuccess ? 'sera un succès' : 'ne sera pas un succès'} auprès des critiques.</p>
+            `;
+            
+            // Succès commercial
+            const commercialContainer = document.getElementById('commercialResult');
+            const commercialSuccess = commercialResult.commercial_success === 1;
+            
+            commercialContainer.innerHTML = `
+                <div class="prediction-icon">
+                    ${commercialSuccess ? 
+                        '<i class="bi bi-graph-up-arrow text-success"></i>' : 
+                        '<i class="bi bi-graph-down-arrow text-danger"></i>'}
+                </div>
+                <h4 class="${commercialSuccess ? 'success' : 'failure'}">
+                    ${commercialSuccess ? 'SUCCÈS COMMERCIAL' : 'ÉCHEC COMMERCIAL'}
+                </h4>
+                <p>Le modèle prédit que ce film ${commercialSuccess ? 'sera rentable' : 'ne sera pas rentable'} au box-office.</p>
+            `;
+            
+            // Ajouter une animation
+            const resultCards = document.querySelectorAll('.result-card');
+            resultCards.forEach(card => {
+                card.style.animation = 'none';
+                setTimeout(() => {
+                    card.style.animation = 'pulse 0.6s';
+                }, 10);
+            });
+        }
+        
+        // Afficher une erreur
+        function displayError() {
+            const critiqueContainer = document.getElementById('critiqueResult');
+            const commercialContainer = document.getElementById('commercialResult');
+            
+            critiqueContainer.innerHTML = `
+                <div class="prediction-icon">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                </div>
+                <h4 class="text-warning">ERREUR</h4>
+                <p>Impossible d'obtenir la prédiction. Vérifiez votre connexion et réessayez.</p>
+            `;
+            
+            commercialContainer.innerHTML = `
+                <div class="prediction-icon">
+                    <i class="bi bi-exclamation-triangle-fill text-warning"></i>
+                </div>
+                <h4 class="text-warning">ERREUR</h4>
+                <p>Impossible d'obtenir la prédiction. Vérifiez votre connexion et réessayez.</p>
+            `;
+        }
+        
+        // Afficher/masquer l'indicateur de chargement
+        function showLoading(show) {
+            document.getElementById('loadingIndicator').style.display = show ? 'block' : 'none';
+            document.getElementById('predictBtn').disabled = show;
+        }
+        
+        // Réinitialiser le formulaire
+        function resetForm() {
+            document.getElementById('movieForm').reset();
+            document.getElementById('original_language').value = 'en';
+            document.getElementById('director').value = 'Steven Spielberg';
+            
+            document.getElementById('critiqueResult').innerHTML = `
+                <p class="text-muted">Remplissez le formulaire et cliquez sur "Obtenir les prédictions"</p>
+            `;
+            
+            document.getElementById('commercialResult').innerHTML = `
+                <p class="text-muted">Remplissez le formulaire et cliquez sur "Obtenir les prédictions"</p>
+            `;
+            
+            hideSearchResults('languageResults');
+            hideSearchResults('directorResults');
+        }
+        
+        // Ajouter une animation CSS pour le "pulse"
+        const style = document.createElement('style');
+        style.textContent = `
+            @keyframes pulse {
+                0% { transform: scale(1); }
+                50% { transform: scale(1.02); }
+                100% { transform: scale(1); }
+            }
+        `;
+        document.head.appendChild(style);
+    </script>
+</body>
+</html>
