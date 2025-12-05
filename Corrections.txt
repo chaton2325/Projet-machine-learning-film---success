@@ -1,0 +1,3 @@
+Correction Machine learning : Choisir la métrique (Accuracy , .... , etc.... pour limiter les false positives negatives etc...)
+
+Correction Data Mining : Faire les analyses , les liens entre les features etc pour preparer le dataset aux algorithmes de machine learning...
